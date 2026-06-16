@@ -37,65 +37,49 @@ h1 {
 
 
 .container {
-
     width:90%;
     max-width:1000px;
     margin:auto;
     padding:25px;
-
 }
 
 
 .search-area {
-
     display:flex;
     gap:10px;
-
 }
 
 
 input {
-
     flex:1;
     padding:15px;
     font-size:18px;
     border-radius:10px;
     border:none;
-
 }
 
 
 button {
-
     padding:15px 25px;
     font-size:18px;
-
     background:red;
     color:white;
-
     border:none;
     border-radius:10px;
-
     cursor:pointer;
-
 }
 
 
 button:hover {
-
     background:#cc0000;
-
 }
 
 
 .card {
 
     background:#202020;
-
-    margin-top:25px;
-
     padding:20px;
-
+    margin-top:25px;
     border-radius:15px;
 
 }
@@ -105,9 +89,7 @@ button:hover {
 
     width:100%;
     max-height:400px;
-
     object-fit:cover;
-
     border-radius:12px;
 
 }
@@ -117,10 +99,16 @@ iframe {
 
     width:100%;
     height:500px;
-
     border:none;
-
     border-radius:12px;
+
+}
+
+
+.status {
+
+    margin-top:20px;
+    color:#aaa;
 
 }
 
@@ -131,14 +119,6 @@ iframe {
     font-weight:bold;
 
 }
-
-
-.loading {
-
-    color:#aaa;
-
-}
-
 
 
 </style>
@@ -166,10 +146,9 @@ Describe the video you want to watch
 
 <div class="search-area">
 
-
 <input
 id="searchInput"
-placeholder="Example: Minecraft Donut SMP starts poor becomes rich"
+placeholder="Minecraft Donut SMP starts poor becomes rich"
 >
 
 
@@ -177,12 +156,11 @@ placeholder="Example: Minecraft Donut SMP starts poor becomes rich"
 Search
 </button>
 
-
 </div>
 
 
-<div id="status"></div>
 
+<div id="status" class="status"></div>
 
 <div id="results"></div>
 
@@ -197,11 +175,11 @@ Search
 
 
 /*
-======================================
+==================================
 VIDEO SEARCH ENGINE
-======================================
+==================================
 
-Current provider:
+Current:
 Piped public API
 
 Future:
@@ -209,119 +187,163 @@ Future:
 - AI ranking
 - Custom backend
 
-======================================
+==================================
 */
 
 
 const VideoSearchEngine = {
 
 
-provider:"piped",
-
-
-
 async search(query){
-
 
     return await this.pipedSearch(query);
 
-
 },
-
-
 
 
 
 async pipedSearch(query){
 
 
-try {
+    const servers = [
 
+        "https://pipedapi.adminforge.de",
+        "https://pipedapi.kavin.rocks",
+        "https://pipedapi.reallyaweso.me"
 
-    let url =
-    "https://piped.video/api/v1/search?q="
-    +
-    encodeURIComponent(query)
-    +
-    "&filter=videos";
-
-
-
-    let response =
-    await fetch(url);
+    ];
 
 
 
-    if(!response.ok){
+    for(let server of servers){
 
-        throw new Error(
-            "API Error: " + response.status
-        );
+
+        try {
+
+
+            let url =
+            server
+            +
+            "/search?q="
+            +
+            encodeURIComponent(query)
+            +
+            "&filter=videos";
+
+
+
+            console.log(
+                "Trying:",
+                url
+            );
+
+
+
+            let response =
+            await fetch(url);
+
+
+
+            let raw =
+            await response.text();
+
+
+
+            console.log(
+                "API response:",
+                raw.substring(0,200)
+            );
+
+
+
+            if(!response.ok){
+
+                continue;
+
+            }
+
+
+
+            let data =
+            JSON.parse(raw);
+
+
+
+            if(!data.items){
+
+                continue;
+
+            }
+
+
+
+            return data.items
+            .slice(0,10)
+            .map(video=>{
+
+
+                let id = "";
+
+
+
+                if(video.url.includes("v=")){
+
+                    id =
+                    video.url.split("v=")[1];
+
+                }
+
+
+
+                return {
+
+                    title:
+                    video.title,
+
+
+                    channel:
+                    video.uploaderName
+                    ||
+                    "Unknown",
+
+
+                    thumbnail:
+                    video.thumbnail,
+
+
+                    id:id,
+
+
+                    description:
+                    "Found using public video search"
+
+                };
+
+
+            });
+
+
+
+        }
+
+        catch(error){
+
+            console.log(
+                "Server failed:",
+                server,
+                error
+            );
+
+        }
+
 
     }
 
 
 
-    let data =
-    await response.json();
-
-
-
-    return data.items
-    .slice(0,10)
-    .map(video=>{
-
-
-        let id =
-        video.url
-        .split("v=")[1];
-
-
-
-        return {
-
-            title:
-            video.title,
-
-
-            channel:
-            video.uploaderName,
-
-
-            thumbnail:
-            video.thumbnail,
-
-
-            id:id,
-
-
-            description:
-            "Found using public video search"
-
-
-        };
-
-
-    });
-
-
-
-}
-
-
-catch(error){
-
-
-    console.error(
-        "Search failed:",
-        error
+    throw new Error(
+        "No working video search API found."
     );
-
-
-    return [];
-
-
-}
 
 
 }
@@ -348,7 +370,7 @@ document.getElementById("searchInput").value;
 if(!query){
 
     alert(
-    "Describe a video first!"
+        "Describe a video first!"
     );
 
     return;
@@ -359,25 +381,54 @@ if(!query){
 
 document.getElementById("status")
 .innerHTML =
-`
-<p class="loading">
-🧠 Searching videos...
-</p>
-`;
+"🧠 Searching...";
 
 
 
-let videos =
-await VideoSearchEngine.search(query);
+document.getElementById("results")
+.innerHTML = "";
 
 
 
-displayVideos(videos);
+try {
 
+
+    let videos =
+    await VideoSearchEngine.search(query);
+
+
+
+    displayVideos(videos);
+
+
+
+    document.getElementById("status")
+    .innerHTML =
+    "Found " + videos.length + " videos";
 
 
 }
 
+
+catch(error){
+
+
+    console.error(error);
+
+
+
+    document.getElementById("status")
+    .innerHTML =
+    "❌ "
+    +
+    error.message;
+
+
+}
+
+
+
+}
 
 
 
@@ -393,42 +444,10 @@ document.getElementById("results");
 
 
 
-results.innerHTML="";
-
-
-
-if(videos.length===0){
-
-
-results.innerHTML =
-`
-<div class="card">
-
-<h2>
-No videos found
-</h2>
-
-<p>
-The API may be blocked, offline, or unavailable.
-</p>
-
-</div>
-`;
-
-
-return;
-
-}
-
-
-
-
-
 videos.forEach(video=>{
 
 
 results.innerHTML +=
-
 
 `
 
@@ -439,7 +458,6 @@ results.innerHTML +=
 class="thumbnail"
 src="${video.thumbnail}"
 >
-
 
 
 <h2>
@@ -457,9 +475,8 @@ ${video.description}
 </p>
 
 
-
 <p class="match">
-Found Match
+Match Found
 </p>
 
 
@@ -479,17 +496,11 @@ allowfullscreen>
 `;
 
 
-
 });
 
 
 
-document.getElementById("status")
-.innerHTML="";
-
-
 }
-
 
 
 
