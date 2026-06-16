@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Video Finder AI</title>
+
+<style>
+
+body {
+    margin:0;
+    background:#101010;
+    color:white;
+    font-family:Arial, sans-serif;
+}
+
+
+header {
+    background:#202020;
+    padding:30px;
+    text-align:center;
+}
+
+
+h1 {
+    font-size:42px;
+    margin:0;
+}
+
+
+.subtitle {
+    color:#aaa;
+    margin-top:10px;
+}
+
+
+.container {
+
+    width:90%;
+    max-width:1000px;
+    margin:auto;
+    padding:25px;
+
+}
+
+
+.search-area {
+
+    display:flex;
+    gap:10px;
+
+}
+
+
+input {
+
+    flex:1;
+    padding:15px;
+    font-size:18px;
+    border-radius:10px;
+    border:none;
+
+}
+
+
+button {
+
+    padding:15px 25px;
+    font-size:18px;
+
+    background:red;
+    color:white;
+
+    border:none;
+    border-radius:10px;
+
+    cursor:pointer;
+
+}
+
+
+button:hover {
+
+    background:#cc0000;
+
+}
+
+
+.card {
+
+    background:#202020;
+
+    margin-top:25px;
+
+    padding:20px;
+
+    border-radius:15px;
+
+}
+
+
+.thumbnail {
+
+    width:100%;
+    max-height:400px;
+
+    object-fit:cover;
+
+    border-radius:12px;
+
+}
+
+
+iframe {
+
+    width:100%;
+    height:500px;
+
+    border:none;
+
+    border-radius:12px;
+
+}
+
+
+.match {
+
+    color:#4cff4c;
+    font-weight:bold;
+
+}
+
+
+.loading {
+
+    color:#aaa;
+
+}
+
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<header>
+
+<h1>🎥 Video Finder AI</h1>
+
+<div class="subtitle">
+Describe the video you want to watch
+</div>
+
+</header>
+
+
+
+<div class="container">
+
+
+<div class="search-area">
+
+
+<input
+id="searchInput"
+placeholder="Example: Minecraft Donut SMP starts poor becomes rich"
+>
+
+
+<button onclick="searchVideos()">
+Search
+</button>
+
+
+</div>
+
+
+<div id="status"></div>
+
+
+<div id="results"></div>
+
+
+</div>
+
+
+
+
+
+<script>
+
+
+/*
+======================================
+VIDEO SEARCH ENGINE
+======================================
+
+Current provider:
+Piped public API
+
+Future:
+- YouTube API
+- AI ranking
+- Custom backend
+
+======================================
+*/
+
+
+const VideoSearchEngine = {
+
+
+provider:"piped",
+
+
+
+async search(query){
+
+
+    return await this.pipedSearch(query);
+
+
+},
+
+
+
+
+
+async pipedSearch(query){
+
+
+try {
+
+
+    let url =
+    "https://piped.video/api/v1/search?q="
+    +
+    encodeURIComponent(query)
+    +
+    "&filter=videos";
+
+
+
+    let response =
+    await fetch(url);
+
+
+
+    if(!response.ok){
+
+        throw new Error(
+            "API Error: " + response.status
+        );
+
+    }
+
+
+
+    let data =
+    await response.json();
+
+
+
+    return data.items
+    .slice(0,10)
+    .map(video=>{
+
+
+        let id =
+        video.url
+        .split("v=")[1];
+
+
+
+        return {
+
+            title:
+            video.title,
+
+
+            channel:
+            video.uploaderName,
+
+
+            thumbnail:
+            video.thumbnail,
+
+
+            id:id,
+
+
+            description:
+            "Found using public video search"
+
+
+        };
+
+
+    });
+
+
+
+}
+
+
+catch(error){
+
+
+    console.error(
+        "Search failed:",
+        error
+    );
+
+
+    return [];
+
+
+}
+
+
+}
+
+
+
+};
+
+
+
+
+
+
+
+
+async function searchVideos(){
+
+
+let query =
+document.getElementById("searchInput").value;
+
+
+
+if(!query){
+
+    alert(
+    "Describe a video first!"
+    );
+
+    return;
+
+}
+
+
+
+document.getElementById("status")
+.innerHTML =
+`
+<p class="loading">
+🧠 Searching videos...
+</p>
+`;
+
+
+
+let videos =
+await VideoSearchEngine.search(query);
+
+
+
+displayVideos(videos);
+
+
+
+}
+
+
+
+
+
+
+
+
+function displayVideos(videos){
+
+
+let results =
+document.getElementById("results");
+
+
+
+results.innerHTML="";
+
+
+
+if(videos.length===0){
+
+
+results.innerHTML =
+`
+<div class="card">
+
+<h2>
+No videos found
+</h2>
+
+<p>
+The API may be blocked, offline, or unavailable.
+</p>
+
+</div>
+`;
+
+
+return;
+
+}
+
+
+
+
+
+videos.forEach(video=>{
+
+
+results.innerHTML +=
+
+
+`
+
+<div class="card">
+
+
+<img
+class="thumbnail"
+src="${video.thumbnail}"
+>
+
+
+
+<h2>
+${video.title}
+</h2>
+
+
+<p>
+${video.channel}
+</p>
+
+
+<p>
+${video.description}
+</p>
+
+
+
+<p class="match">
+Found Match
+</p>
+
+
+
+<iframe
+
+src="https://www.youtube.com/embed/${video.id}"
+
+allowfullscreen>
+
+</iframe>
+
+
+
+</div>
+
+`;
+
+
+
+});
+
+
+
+document.getElementById("status")
+.innerHTML="";
+
+
+}
+
+
+
+
+</script>
+
+
+</body>
+</html>
